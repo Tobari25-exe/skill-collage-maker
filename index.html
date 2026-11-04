@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>素質コラメーカー</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app">
+    <h1>素質コラメーカー</h1>
+    <label for="inputText">作りたい文章</label>
+    <textarea id="inputText" rows="3" spellcheck="false" placeholder="文章を入力"></textarea>
+    <label class="checkbox-option"><input type="checkbox" id="kanaInsensitive"> ひらがな・カタカナを区別しない</label>
+    <div class="actions">
+      <button type="button" class="primary" id="generate">画像を作成</button>
+      <button type="button" class="secondary" id="reroll" disabled>候補を引き直す</button>
+      <button type="button" class="secondary" id="save" disabled>画像を保存</button>
+    </div>
+    <p id="error" class="error" role="alert" hidden></p>
+    <div id="previewViewport" class="preview" hidden>
+      <img id="preview" alt="生成した素質コラ画像">
+    </div>
+  </main>
+  <script src="./script.js" type="module"></script>
+</body>
+</html>
