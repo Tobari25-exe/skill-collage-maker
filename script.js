@@ -4,7 +4,6 @@ import { MosaicEngine } from './mosaic-browser.js';
 const el = id => document.getElementById(id);
 const state = { engine: null, imageUrl: null, text: null, kanaInsensitive: false,
   signature: null, hasAlternative: false, busy: false };
-
 function showError(message) {
   const element = el('error');
   element.textContent = message;
@@ -72,7 +71,6 @@ async function generate(reroll = false) {
     refreshButtons();
   }
 }
-
 el('generate').addEventListener('click', () => generate(false));
 el('reroll').addEventListener('click', () => generate(true));
 el('save').addEventListener('click', () => {
