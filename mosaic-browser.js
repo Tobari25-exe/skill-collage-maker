@@ -186,7 +186,6 @@ export class MosaicEngine {
   }
   search(text, { kanaInsensitive = false, seed = randomSeed() } = {}) {
     if (!text || !text.trim()) throw new Error('文章を入力してください。');
-    if (Array.from(text).length > 200) throw new Error('文章は200文字以内で入力してください。');
     if (!Number.isInteger(seed) || seed < 0 || seed >= 4294967296) {
       throw new Error('乱数シードが不正です。');
     }
