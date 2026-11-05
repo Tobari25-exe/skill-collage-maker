@@ -2,12 +2,13 @@
  * 画像・文字情報はカタログに含まれる既存の値をそのまま使用する。
  */
 export const OUTPUT_HEIGHT = 810;
+// 桃素質はタイトル帯が金・紫より61px下。原寸のまま上方向に平行移動する。
+export const PINK_OFFSET_Y = -61;
 
 const SYMBOL_VARIANTS = new Map([
   ['〜', '~'], ['−', '-'], ['‐', '-'], ['‑', '-'], ['‒', '-'],
   ['–', '-'], ['—', '-'], ['―', '-'], ['、', ','], ['。', '.'], ['·', '・'],
 ]);
-
 // Python版の東アジア文字幅 F / H 相当を、幅を変換したい文字群に限定する。
 // 一般の漢字・平仮名・片仮名を互換漢字などへ変換しない。
 function isWidthVariant(char) {
@@ -52,7 +53,6 @@ export function textUnits(text, kanaInsensitive = false) {
 export function normalized(text, kanaInsensitive = false) {
   return textUnits(text, kanaInsensitive).map(unit => unit.canonical).join('');
 }
-
 export function verifyCatalog(catalog) {
   if (!catalog || catalog.schema_version !== 2 || !Array.isArray(catalog.assets)) {
     throw new Error('素材データの形式が不正です。');
@@ -61,7 +61,7 @@ export function verifyCatalog(catalog) {
   for (const asset of catalog.assets) {
     if (!asset.id || seen.has(asset.id) ||
       asset.width !== 579 || asset.height !== OUTPUT_HEIGHT ||
-      !asset.file?.startsWith('assets/') || !asset.file.endsWith('.png') ||
+      !(asset.file?.startsWith('assets/') || asset.file?.startsWith('assets2/')) || !asset.file.endsWith('.png') ||
       !asset.title?.text ||
       asset.title.char_x?.length !== Array.from(asset.title.text).length) {
       throw new Error('素材データの内容が不正です。');
@@ -70,7 +70,6 @@ export function verifyCatalog(catalog) {
   }
   return catalog;
 }
-
 function compareScores(a, b) {
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
@@ -133,7 +132,6 @@ export function randomSeed() {
   crypto.getRandomValues(array);
   return array[0];
 }
-
 // Python の round(100*covered/total, 1) と同じ half-even 丸め。
 // 0〜200文字の範囲では整数演算で浮動小数点の境界誤差も回避できる。
 function coveragePercent(covered, total) {
@@ -145,14 +143,32 @@ function coveragePercent(covered, total) {
   return rounded / 10;
 }
 
+// 元カードの外枠だけを残したキャップ。各色・各端に2種ずつ用意する。
+// 装飾は検索・採点対象とせず、検索で選ばれた素材そのものは変えない。
+const EDGE_CAPS = {
+  left: {
+    gold: ['./data/caps/left-gold-a.png', './data/caps/left-gold-b.png'],
+    purple: ['./data/caps/left-purple-a.png', './data/caps/left-purple-b.png'],
+  },
+  right: {
+    gold: ['./data/caps/right-gold-a.png', './data/caps/right-gold-b.png'],
+    purple: ['./data/caps/right-purple-a.png', './data/caps/right-purple-b.png'],
+  },
+};
+// 32 bit seedから、左右独立の再現可能なバリエーションを決める。
+function capVariant(seed, side) {
+  const salt = side === 'left' ? 0x6e624eb7 : 0x4f1bbcdc;
+  return (Math.imul((seed ^ salt) >>> 0, 0x9e3779b1) >>> 31) & 1;
+}
+
 export class MosaicEngine {
   constructor(catalog) {
     this.catalog = verifyCatalog(catalog);
     this.byId = new Map(catalog.assets.map(asset => [asset.id, asset]));
     this.indexes = new Map();
     this.imageCache = new Map();
+    this.capCache = new Map();
   }
-
   getIndex(kanaInsensitive) {
     if (this.indexes.has(kanaInsensitive)) return this.indexes.get(kanaInsensitive);
     const starts = new Map();
@@ -168,7 +184,6 @@ export class MosaicEngine {
     this.indexes.set(kanaInsensitive, starts);
     return starts;
   }
-
   search(text, { kanaInsensitive = false, seed = randomSeed() } = {}) {
     if (!text || !text.trim()) throw new Error('文章を入力してください。');
     if (Array.from(text).length > 200) throw new Error('文章は200文字以内で入力してください。');
@@ -183,7 +198,6 @@ export class MosaicEngine {
     const scores = Array.from({ length: n + 1 }, () => [0, 0, 0, 0, 0]);
     const choices = Array.from({ length: n + 1 }, () => []);
     const rawTarget = Array.from(text);
-
     for (let i = n - 1; i >= 0; i--) {
       const requested = targetUnits[i];
       let best = scores[i + 1].slice();
@@ -248,12 +262,10 @@ export class MosaicEngine {
       pieces,
     };
   }
-
   signature(result) {
     return JSON.stringify(result.pieces.map(piece =>
       [piece.type, piece.asset_id || null, piece.start_char ?? null, piece.end_char ?? null]));
   }
-
   async loadImage(asset) {
     if (!this.imageCache.has(asset.id)) {
       const url = `./data/${asset.file}`;
@@ -274,7 +286,39 @@ export class MosaicEngine {
     }
     return this.imageCache.get(asset.id);
   }
-
+  async loadCap(side, color, seed) {
+    const url = EDGE_CAPS[side][color][capVariant(seed, side)];
+    if (!this.capCache.has(url)) {
+      const promise = new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('端の装飾画像を読み込めませんでした。'));
+        image.src = url;
+      });
+      this.capCache.set(url, promise);
+      promise.catch(() => this.capCache.delete(url));
+    }
+    return this.capCache.get(url);
+  }
+  // 全840枚の画像で、(18,450)の枠色は金・紫の2通りだけ。
+  // 最初/最後の文字片に色を合わせ、接合部分の色違いを防ぐ。
+  frameColor(image, asset, seed, side) {
+    if (asset.file.startsWith('assets2/')) {
+      // 桃素材の途中で切れた端は、桃キャップを使わず金・紫から選ぶ。
+      // カード自身の先頭／末尾を使える場合は補完処理を通らず、桃の枠を維持する。
+      // 検索の乱数系列を消費しないよう、seedと左右別のsaltから決定する。
+      const salt = side === 'left' ? 0x0b34de29 : 0x70f9b4d3;
+      return (Math.imul((seed ^ salt) >>> 0, 0x85ebca6b) >>> 31) ? 'purple' : 'gold';
+    }
+    const detector = document.createElement('canvas');
+    detector.width = detector.height = 1;
+    const context = detector.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('このブラウザでは素材の色を判別できません。');
+    context.drawImage(image, 18, 450, 1, 1, 0, 0, 1, 1);
+    const pixel = context.getImageData(0, 0, 1, 1).data;
+    detector.width = detector.height = 0;
+    return pixel[0] > pixel[2] ? 'gold' : 'purple';
+  }
   async render(result) {
     if (!result.complete) throw new Error('素材にない文字があります。');
     const pieces = result.pieces;
@@ -289,10 +333,30 @@ export class MosaicEngine {
       if (index === pieces.length - 1 && piece.end_char === Array.from(asset.title.text).length) x1 = asset.width;
       return { asset, x0, x1, width: x1 - x0 };
     });
-    const width = crops.reduce((sum, part) => sum + part.width, 0);
+    const images = await Promise.all(crops.map(part => this.loadImage(part.asset)));
+    const strips = crops.map((part, i) => ({ ...part, image: images[i],
+      yOffset: part.asset.file.startsWith('assets2/') ? PINK_OFFSET_Y : 0 }));
+    for (const strip of strips) {
+      if (strip.image.naturalWidth !== strip.asset.width || strip.image.naturalHeight !== OUTPUT_HEIGHT) {
+        throw new Error('素材画像の寸法が不正です。');
+      }
+    }
+    // 既存の先頭・末尾の完全なカード枠を優先。途中から始まる／終わる場合だけ補う。
+    if (pieces[0].start_char > 0) {
+      const cap = await this.loadCap('left', this.frameColor(images[0], crops[0].asset, result.seed, 'left'), result.seed);
+      if (cap.naturalHeight !== OUTPUT_HEIGHT) throw new Error('端の装飾画像の高さが不正です。');
+      strips.unshift({ image: cap, x0: 0, width: cap.naturalWidth });
+    }
+    const last = pieces.at(-1);
+    const lastAsset = crops.at(-1).asset;
+    if (last.end_char < Array.from(lastAsset.title.text).length) {
+      const cap = await this.loadCap('right', this.frameColor(images.at(-1), crops.at(-1).asset, result.seed, 'right'), result.seed);
+      if (cap.naturalHeight !== OUTPUT_HEIGHT) throw new Error('端の装飾画像の高さが不正です。');
+      strips.push({ image: cap, x0: 0, width: cap.naturalWidth });
+    }
+    const width = strips.reduce((sum, part) => sum + part.width, 0);
     // Canvasの上限を超えた場合、内容を欠落させずにエラーにする。
     if (width > 32767) throw new Error('生成画像が長すぎます。文章を短くしてください。');
-    const images = await Promise.all(crops.map(part => this.loadImage(part.asset)));
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = OUTPUT_HEIGHT;
@@ -300,14 +364,10 @@ export class MosaicEngine {
     if (!ctx) throw new Error('このブラウザでは画像を合成できません。');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, OUTPUT_HEIGHT);
-    for (let i = 0, x = 0; i < crops.length; i++) {
-      const part = crops[i];
-      const image = images[i];
-      if (image.naturalWidth !== part.asset.width || image.naturalHeight !== OUTPUT_HEIGHT) {
-        throw new Error('素材画像の寸法が不正です。');
-      }
-      ctx.drawImage(image, part.x0, 0, part.width, OUTPUT_HEIGHT,
-        x, 0, part.width, OUTPUT_HEIGHT);
+    for (let x = 0, i = 0; i < strips.length; i++) {
+      const part = strips[i];
+      ctx.drawImage(part.image, part.x0, 0, part.width, OUTPUT_HEIGHT,
+        x, part.yOffset ?? 0, part.width, OUTPUT_HEIGHT);
       x += part.width;
     }
     const blob = await new Promise((resolve, reject) => canvas.toBlob(
