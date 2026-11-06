@@ -1,4 +1,4 @@
-import { MosaicEngine } from './mosaic-browser.js';
+import { MosaicEngine } from './mosaic-browser.js?v=20261107-precision5';
 
 'use strict';
 const el = id => document.getElementById(id);
@@ -30,7 +30,7 @@ function refreshButtons() {
 }
 async function getEngine() {
   if (state.engine) return state.engine;
-  const response = await fetch('./data/catalog.json');
+  const response = await fetch('./data/catalog.json?v=20261107-precision5');
   if (!response.ok) throw new Error('素材データを読み込めませんでした。');
   state.engine = new MosaicEngine(await response.json());
   return state.engine;

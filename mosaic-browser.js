@@ -144,7 +144,7 @@ function coveragePercent(covered, total) {
 
 function buildCapList(side, color) {
   return Array.from({ length: 10 }, (_, i) =>
-    `./data/caps/${side}-${color}-${String(i + 1).padStart(2, '0')}.png`);
+    `./data/caps/${side}-${color}-${String(i + 1).padStart(2, '0')}.png?v=20261107-precision5`);
 }
 // 左右キャップは従来素材。中央キャップは2～3字の日本語カードのタイトル余白から抽出。
 // 装飾は検索・採点対象とせず、検索で選ばれた素材そのものは変えない。
@@ -188,6 +188,8 @@ export class MosaicEngine {
       if (Array.from(source).length !== asset.title.char_x.length) continue;
       const units = textUnits(source, kanaInsensitive);
       units.forEach((unit, pos) => {
+        // 空白は常に専用capsで描画し、英語タイトル内部の空白を素材にしない。
+        if (unit.canonical === ' ') return;
         if (!starts.has(unit.canonical)) starts.set(unit.canonical, []);
         starts.get(unit.canonical).push({ asset, pos, units });
       });
@@ -358,10 +360,7 @@ export class MosaicEngine {
           pieces.slice(pieces.indexOf(piece) + 1).every(next => next.type !== 'match');
         if (isFirstPiece) x0 = 0;
         if (isLastPiece) x1 = asset.width;
-        // 前回の修正内容を維持。切り出し境界の小さな見切れを軽減する。
-        const spanChars = piece.end_char - piece.start_char;
-        if (!isFirstPiece) x0 = Math.max(0, x0 - (spanChars <= 2 ? 2 : 1));
-        if (!isLastPiece) x1 = Math.min(asset.width, x1 + (spanChars <= 2 ? 2 : 1));
+        // char_x は実画像の文字間の空き領域に配置済み。余分な拡張は隣字の混入を招くので行わない。
         items.push({ type: 'match', piece, asset, x0, x1, width: x1 - x0 });
       } else if (piece.type === 'space') {
         items.push({ type: 'space', piece, count: Array.from(piece.text).length });
