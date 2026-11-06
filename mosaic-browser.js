@@ -23,6 +23,7 @@ function normalizeRaw(raw) {
   return Array.from(raw).some(isWidthVariant) ? raw.normalize('NFKC') : raw.normalize('NFC');
 }
 function canonicalCharacter(raw, kanaInsensitive) {
+  if (/^\s$/u.test(raw)) return ' ';
   let char = normalizeRaw(raw);
   char = SYMBOL_VARIANTS.get(char) ?? char;
   const lower = char.toLowerCase();
@@ -133,7 +134,7 @@ export function randomSeed() {
   return array[0];
 }
 // Python の round(100*covered/total, 1) と同じ half-even 丸め。
-// 0〜200文字の範囲では整数演算で浮動小数点の境界誤差も回避できる。
+// 文字数が増えても covered / total は安全な範囲で計算する。
 function coveragePercent(covered, total) {
   const numerator = 1000 * covered;
   const whole = Math.floor(numerator / total);
@@ -143,22 +144,34 @@ function coveragePercent(covered, total) {
   return rounded / 10;
 }
 
-// 元カードの外枠だけを残したキャップ。各色・各端に2種ずつ用意する。
+function buildCapList(side, color) {
+  return Array.from({ length: 10 }, (_, i) =>
+    `./data/caps/${side}-${color}-${String(i + 1).padStart(2, '0')}.png`);
+}
+// 元カードの外枠・中帯だけを残した補完素材。各色・各位置に10種ずつ用意する。
 // 装飾は検索・採点対象とせず、検索で選ばれた素材そのものは変えない。
 const EDGE_CAPS = {
   left: {
-    gold: ['./data/caps/left-gold-a.png', './data/caps/left-gold-b.png'],
-    purple: ['./data/caps/left-purple-a.png', './data/caps/left-purple-b.png'],
+    gold: buildCapList('left', 'gold'),
+    purple: buildCapList('left', 'purple'),
   },
   right: {
-    gold: ['./data/caps/right-gold-a.png', './data/caps/right-gold-b.png'],
-    purple: ['./data/caps/right-purple-a.png', './data/caps/right-purple-b.png'],
+    gold: buildCapList('right', 'gold'),
+    purple: buildCapList('right', 'purple'),
+  },
+  middle: {
+    gold: buildCapList('middle', 'gold'),
+    purple: buildCapList('middle', 'purple'),
   },
 };
-// 32 bit seedから、左右独立の再現可能なバリエーションを決める。
-function capVariant(seed, side) {
-  const salt = side === 'left' ? 0x6e624eb7 : 0x4f1bbcdc;
-  return (Math.imul((seed ^ salt) >>> 0, 0x9e3779b1) >>> 31) & 1;
+function capVariant(seed, side, ordinal = 0) {
+  const saltMap = { left: 0x6e624eb7, right: 0x4f1bbcdc, middle: 0x13c2a85d };
+  const salt = saltMap[side] ?? 0x9e3779b9;
+  let value = (seed ^ salt ^ Math.imul((ordinal + 1) >>> 0, 0x85ebca6b)) >>> 0;
+  value ^= value >>> 16;
+  value = Math.imul(value, 0x7feb352d) >>> 0;
+  value ^= value >>> 15;
+  return (value >>> 0) % EDGE_CAPS[side].gold.length;
 }
 
 export class MosaicEngine {
@@ -185,22 +198,33 @@ export class MosaicEngine {
     return starts;
   }
   search(text, { kanaInsensitive = false, seed = randomSeed() } = {}) {
-    if (!text || !text.trim()) throw new Error('文章を入力してください。');
+    const trimmed = text?.trim() ?? '';
+    if (!trimmed) throw new Error('文章を入力してください。');
     if (!Number.isInteger(seed) || seed < 0 || seed >= 4294967296) {
       throw new Error('乱数シードが不正です。');
     }
     const rng = new PythonRandom(seed);
-    const targetUnits = textUnits(text, kanaInsensitive);
+    const targetUnits = textUnits(trimmed, kanaInsensitive);
     const target = targetUnits.map(unit => unit.canonical).join('');
     const starts = this.getIndex(kanaInsensitive);
     const n = targetUnits.length;
     const scores = Array.from({ length: n + 1 }, () => [0, 0, 0, 0, 0]);
     const choices = Array.from({ length: n + 1 }, () => []);
-    const rawTarget = Array.from(text);
+    const rawTarget = Array.from(trimmed);
     for (let i = n - 1; i >= 0; i--) {
       const requested = targetUnits[i];
       let best = scores[i + 1].slice();
       let options = [{ type: 'missing', text: requested.raw, from: requested.start, to: requested.end }];
+      if (requested.canonical === ' ') {
+        const after = scores[i + 1];
+        const score = [after[0] + 1, after[1], after[2], after[3], after[4]];
+        const compare = compareScores(score, best);
+        if (compare >= 0) {
+          const piece = { type: 'space', text: requested.raw, from: requested.start, to: requested.end };
+          if (compare > 0) { best = score; options = [piece]; }
+          else options.push(piece);
+        }
+      }
       for (const { asset, pos, units } of starts.get(requested.canonical) || []) {
         let matchingLen = 0;
         let changedCount = 0;
@@ -242,7 +266,7 @@ export class MosaicEngine {
       const options = choices[pos];
       if (options.length > 1) hasAlternative = true;
       const piece = { ...options[rng.choiceIndex(options.length)] };
-      if (piece.type === 'missing' && pieces.length && pieces.at(-1).type === 'missing') {
+      if ((piece.type === 'missing' || piece.type === 'space') && pieces.length && pieces.at(-1).type === piece.type) {
         pieces.at(-1).text += piece.text;
         pieces.at(-1).to = piece.to;
       } else {
@@ -252,7 +276,7 @@ export class MosaicEngine {
     }
     const covered = scores[0][0];
     return {
-      requested: text, normalized: target, kana_insensitive: kanaInsensitive,
+      requested: trimmed, normalized: target, kana_insensitive: kanaInsensitive,
       seed, complete: covered === n, covered, total: n,
       coverage_percent: coveragePercent(covered, n),
       card_count: pieces.filter(p => p.type === 'match').length,
@@ -285,8 +309,8 @@ export class MosaicEngine {
     }
     return this.imageCache.get(asset.id);
   }
-  async loadCap(side, color, seed) {
-    const url = EDGE_CAPS[side][color][capVariant(seed, side)];
+  async loadCap(side, color, seed, ordinal = 0) {
+    const url = EDGE_CAPS[side][color][capVariant(seed, side, ordinal)];
     if (!this.capCache.has(url)) {
       const promise = new Promise((resolve, reject) => {
         const image = new Image();
@@ -322,39 +346,91 @@ export class MosaicEngine {
     if (!result.complete) throw new Error('素材にない文字があります。');
     const pieces = result.pieces;
     if (!pieces.length) throw new Error('合成する画像がありません。');
-    const crops = pieces.map((piece, index) => {
-      const asset = this.byId.get(piece.asset_id);
-      if (!asset) throw new Error('採用した素材が見つかりません。');
-      const cells = asset.title.char_x;
-      let x0 = cells[piece.start_char][0];
-      let x1 = cells[piece.end_char - 1][1];
-      if (index === 0 && piece.start_char === 0) x0 = 0;
-      if (index === pieces.length - 1 && piece.end_char === Array.from(asset.title.text).length) x1 = asset.width;
-      return { asset, x0, x1, width: x1 - x0 };
+
+    const items = [];
+    for (const piece of pieces) {
+      if (piece.type === 'match') {
+        const asset = this.byId.get(piece.asset_id);
+        if (!asset) throw new Error('採用した素材が見つかりません。');
+        const cells = asset.title.char_x;
+        let x0 = cells[piece.start_char][0];
+        let x1 = cells[piece.end_char - 1][1];
+        if (items.length === 0 && piece.start_char === 0) x0 = 0;
+        if (piece.end_char === Array.from(asset.title.text).length &&
+          pieces.slice(pieces.indexOf(piece) + 1).every(next => next.type !== 'match')) x1 = asset.width;
+        items.push({ type: 'match', piece, asset, x0, x1, width: x1 - x0 });
+      } else if (piece.type === 'space') {
+        items.push({ type: 'space', piece, count: Array.from(piece.text).length });
+      }
+    }
+
+    const matchItems = items.filter(item => item.type === 'match');
+    const images = await Promise.all(matchItems.map(item => this.loadImage(item.asset)));
+    matchItems.forEach((item, i) => {
+      item.image = images[i];
+      item.yOffset = item.asset.file.startsWith('assets2/') ? PINK_OFFSET_Y : 0;
     });
-    const images = await Promise.all(crops.map(part => this.loadImage(part.asset)));
-    const strips = crops.map((part, i) => ({ ...part, image: images[i],
-      yOffset: part.asset.file.startsWith('assets2/') ? PINK_OFFSET_Y : 0 }));
-    for (const strip of strips) {
-      if (strip.image.naturalWidth !== strip.asset.width || strip.image.naturalHeight !== OUTPUT_HEIGHT) {
+    for (const item of matchItems) {
+      if (item.image.naturalWidth !== item.asset.width || item.image.naturalHeight !== OUTPUT_HEIGHT) {
         throw new Error('素材画像の寸法が不正です。');
       }
     }
-    // 既存の先頭・末尾の完全なカード枠を優先。途中から始まる／終わる場合だけ補う。
-    if (pieces[0].start_char > 0) {
-      const cap = await this.loadCap('left', this.frameColor(images[0], crops[0].asset, result.seed, 'left'), result.seed);
+
+    const firstMatch = matchItems[0];
+    const lastMatch = matchItems.at(-1);
+    const strips = [];
+
+    if (firstMatch && firstMatch.piece.start_char > 0) {
+      const color = this.frameColor(firstMatch.image, firstMatch.asset, result.seed, 'left');
+      const cap = await this.loadCap('left', color, result.seed, 0);
       if (cap.naturalHeight !== OUTPUT_HEIGHT) throw new Error('端の装飾画像の高さが不正です。');
-      strips.unshift({ image: cap, x0: 0, width: cap.naturalWidth });
+      strips.push({ image: cap, x0: 0, width: cap.naturalWidth, yOffset: 0 });
     }
-    const last = pieces.at(-1);
-    const lastAsset = crops.at(-1).asset;
-    if (last.end_char < Array.from(lastAsset.title.text).length) {
-      const cap = await this.loadCap('right', this.frameColor(images.at(-1), crops.at(-1).asset, result.seed, 'right'), result.seed);
+
+    const chooseMiddleColor = (index, ordinal) => {
+      let prev = null;
+      let next = null;
+      for (let i = index - 1; i >= 0; i--) {
+        if (items[i].type === 'match') { prev = items[i]; break; }
+      }
+      for (let i = index + 1; i < items.length; i++) {
+        if (items[i].type === 'match') { next = items[i]; break; }
+      }
+      const leftColor = prev ? this.frameColor(prev.image, prev.asset, result.seed, 'right') : null;
+      const rightColor = next ? this.frameColor(next.image, next.asset, result.seed, 'left') : null;
+      if (leftColor && rightColor && leftColor === rightColor) return leftColor;
+      if (leftColor && !rightColor) return leftColor;
+      if (!leftColor && rightColor) return rightColor;
+      if (leftColor && rightColor) {
+        return capVariant(result.seed, 'middle', ordinal) & 1 ? leftColor : rightColor;
+      }
+      return capVariant(result.seed, 'middle', ordinal) & 1 ? 'gold' : 'purple';
+    };
+
+    let spaceOrdinal = 0;
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+      if (item.type === 'match') {
+        strips.push({ image: item.image, x0: item.x0, width: item.width, yOffset: item.yOffset ?? 0 });
+      } else if (item.type === 'space') {
+        for (let k = 0; k < item.count; k++) {
+          const color = chooseMiddleColor(index, spaceOrdinal);
+          const cap = await this.loadCap('middle', color, result.seed, spaceOrdinal);
+          if (cap.naturalHeight !== OUTPUT_HEIGHT) throw new Error('スペース用装飾画像の高さが不正です。');
+          strips.push({ image: cap, x0: 0, width: cap.naturalWidth, yOffset: 0 });
+          spaceOrdinal++;
+        }
+      }
+    }
+
+    if (lastMatch && lastMatch.piece.end_char < Array.from(lastMatch.asset.title.text).length) {
+      const color = this.frameColor(lastMatch.image, lastMatch.asset, result.seed, 'right');
+      const cap = await this.loadCap('right', color, result.seed, 0);
       if (cap.naturalHeight !== OUTPUT_HEIGHT) throw new Error('端の装飾画像の高さが不正です。');
-      strips.push({ image: cap, x0: 0, width: cap.naturalWidth });
+      strips.push({ image: cap, x0: 0, width: cap.naturalWidth, yOffset: 0 });
     }
+
     const width = strips.reduce((sum, part) => sum + part.width, 0);
-    // Canvasの上限を超えた場合、内容を欠落させずにエラーにする。
     if (width > 32767) throw new Error('生成画像が長すぎます。文章を短くしてください。');
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -365,8 +441,7 @@ export class MosaicEngine {
     ctx.fillRect(0, 0, width, OUTPUT_HEIGHT);
     for (let x = 0, i = 0; i < strips.length; i++) {
       const part = strips[i];
-      ctx.drawImage(part.image, part.x0, 0, part.width, OUTPUT_HEIGHT,
-        x, part.yOffset ?? 0, part.width, OUTPUT_HEIGHT);
+      ctx.drawImage(part.image, part.x0, 0, part.width, OUTPUT_HEIGHT, x, part.yOffset ?? 0, part.width, OUTPUT_HEIGHT);
       x += part.width;
     }
     const blob = await new Promise((resolve, reject) => canvas.toBlob(
