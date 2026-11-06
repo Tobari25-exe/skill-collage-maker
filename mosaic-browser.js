@@ -26,8 +26,6 @@ function canonicalCharacter(raw, kanaInsensitive) {
   if (/^\s$/u.test(raw)) return ' ';
   let char = normalizeRaw(raw);
   char = SYMBOL_VARIANTS.get(char) ?? char;
-  const lower = char.toLowerCase();
-  if (Array.from(lower).length === 1) char = lower;
   if (kanaInsensitive && Array.from(char).length === 1) {
     const cp = char.codePointAt(0);
     if ((cp >= 0x3041 && cp <= 0x3096) || cp === 0x309d || cp === 0x309e) {
@@ -148,7 +146,7 @@ function buildCapList(side, color) {
   return Array.from({ length: 10 }, (_, i) =>
     `./data/caps/${side}-${color}-${String(i + 1).padStart(2, '0')}.png`);
 }
-// 元カードの外枠・中帯だけを残した補完素材。各色・各位置に10種ずつ用意する。
+// 左右キャップは従来素材。中央キャップは2～3字の日本語カードのタイトル余白から抽出。
 // 装飾は検索・採点対象とせず、検索で選ばれた素材そのものは変えない。
 const EDGE_CAPS = {
   left: {
@@ -213,22 +211,22 @@ export class MosaicEngine {
     const rawTarget = Array.from(trimmed);
     for (let i = n - 1; i >= 0; i--) {
       const requested = targetUnits[i];
-      let best = scores[i + 1].slice();
-      let options = [{ type: 'missing', text: requested.raw, from: requested.start, to: requested.end }];
+      // ASCIIスペースは必ず文字のない専用装飾で描画する。
+      // 英語タイトル中の空白の位置を直接切り出すと隣の文字が混入するため、
+      // 通常の素材検索よりもこちらを優先する。
       if (requested.canonical === ' ') {
         const after = scores[i + 1];
-        const score = [after[0] + 1, after[1], after[2], after[3], after[4]];
-        const compare = compareScores(score, best);
-        if (compare >= 0) {
-          const piece = { type: 'space', text: requested.raw, from: requested.start, to: requested.end };
-          if (compare > 0) { best = score; options = [piece]; }
-          else options.push(piece);
-        }
+        scores[i] = [after[0] + 1, after[1], after[2], after[3], after[4]];
+        choices[i] = [{ type: 'space', text: requested.raw, from: requested.start, to: requested.end }];
+        continue;
       }
+      let best = scores[i + 1].slice();
+      let options = [{ type: 'missing', text: requested.raw, from: requested.start, to: requested.end }];
       for (const { asset, pos, units } of starts.get(requested.canonical) || []) {
         let matchingLen = 0;
         let changedCount = 0;
         while (i + matchingLen < n && pos + matchingLen < units.length &&
+          targetUnits[i + matchingLen].canonical !== ' ' &&
           targetUnits[i + matchingLen].canonical === units[pos + matchingLen].canonical) {
           if (targetUnits[i + matchingLen].raw !== units[pos + matchingLen].raw) changedCount++;
           matchingLen++;
@@ -355,9 +353,15 @@ export class MosaicEngine {
         const cells = asset.title.char_x;
         let x0 = cells[piece.start_char][0];
         let x1 = cells[piece.end_char - 1][1];
-        if (items.length === 0 && piece.start_char === 0) x0 = 0;
-        if (piece.end_char === Array.from(asset.title.text).length &&
-          pieces.slice(pieces.indexOf(piece) + 1).every(next => next.type !== 'match')) x1 = asset.width;
+        const isFirstPiece = items.length === 0 && piece.start_char === 0;
+        const isLastPiece = piece.end_char === Array.from(asset.title.text).length &&
+          pieces.slice(pieces.indexOf(piece) + 1).every(next => next.type !== 'match');
+        if (isFirstPiece) x0 = 0;
+        if (isLastPiece) x1 = asset.width;
+        // 前回の修正内容を維持。切り出し境界の小さな見切れを軽減する。
+        const spanChars = piece.end_char - piece.start_char;
+        if (!isFirstPiece) x0 = Math.max(0, x0 - (spanChars <= 2 ? 2 : 1));
+        if (!isLastPiece) x1 = Math.min(asset.width, x1 + (spanChars <= 2 ? 2 : 1));
         items.push({ type: 'match', piece, asset, x0, x1, width: x1 - x0 });
       } else if (piece.type === 'space') {
         items.push({ type: 'space', piece, count: Array.from(piece.text).length });
