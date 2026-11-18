@@ -1,4 +1,4 @@
-import { MosaicEngine } from './mosaic-browser.js?v=20261107-precision5';
+import { MosaicEngine } from './mosaic-browser.js';
 
 'use strict';
 const el = id => document.getElementById(id);
@@ -28,12 +28,53 @@ function refreshButtons() {
     state.text !== el('inputText').value || state.kanaInsensitive !== el('kanaInsensitive').checked;
   document.body.classList.toggle('busy', state.busy);
 }
+let enginePromise = null;
 async function getEngine() {
   if (state.engine) return state.engine;
-  const response = await fetch('./data/catalog.json?v=20261107-precision5');
-  if (!response.ok) throw new Error('素材データを読み込めませんでした。');
-  state.engine = new MosaicEngine(await response.json());
-  return state.engine;
+  if (!enginePromise) {
+    enginePromise = (async () => {
+      const manifestPath = './data/catalog/manifest.json';
+      const manifestResponse = await fetch(manifestPath);
+      if (!manifestResponse.ok) throw new Error('素材一覧（manifest.json）を読み込めませんでした。');
+      const manifest = await manifestResponse.json();
+      if (manifest.schema_version !== 2 ||
+          !Number.isSafeInteger(manifest.part_count) || manifest.part_count < 1 ||
+          !Number.isSafeInteger(manifest.asset_count) || manifest.asset_count < 0 ||
+          !Number.isSafeInteger(manifest.chunk_size) || manifest.chunk_size < 1 ||
+          manifest.part_count !== Math.ceil(manifest.asset_count / manifest.chunk_size)) {
+        throw new Error('素材一覧（manifest.json）の形式が正しくありません。');
+      }
+
+      const parts = await Promise.all(
+        Array.from({ length: manifest.part_count }, async (_, index) => {
+          const path = `./data/catalog/catalog-${index + 1}.json`;
+          const response = await fetch(path);
+          if (!response.ok) throw new Error(`${path} を読み込めませんでした。`);
+          const catalog = await response.json();
+          const expectedCount = Math.min(
+            manifest.chunk_size, manifest.asset_count - index * manifest.chunk_size
+          );
+          if (catalog.schema_version !== manifest.schema_version ||
+              !Array.isArray(catalog.assets) || catalog.assets.length !== expectedCount) {
+            throw new Error(`${path} の形式または件数が正しくありません。`);
+          }
+          return catalog.assets;
+        })
+      );
+      const assets = parts.flat();
+      if (assets.length !== manifest.asset_count) {
+        throw new Error('素材の件数がmanifest.jsonと一致しません。');
+      }
+      return new MosaicEngine({ schema_version: manifest.schema_version, assets });
+    })().then(engine => {
+      state.engine = engine;
+      return engine;
+    }).catch(error => {
+      enginePromise = null; // 次の操作で再試行できるようにする
+      throw error;
+    });
+  }
+  return enginePromise;
 }
 async function generate(reroll = false) {
   if (state.busy) return;
