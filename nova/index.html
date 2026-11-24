@@ -7,8 +7,8 @@
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}.drop-zone{padding:0;position:relative}.drop-zone .file-label{display:block;padding:22px 10px;margin:0;cursor:pointer;font-size:14px;font-weight:400}.drop-zone:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 /* Match the existing site's layout and controls without importing its CSS. */
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#fff;--text:#1f2937;--line:#d1d7e0;--accent:#2456a4;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-synthesis:none}
-body{font:inherit;line-height:1.65}main{max-width:1080px;padding:52px 28px 72px}header{padding:0}h1{font-size:29px;letter-spacing:.02em;margin:0 0 36px;font-weight:750}button{font-size:15px;font-weight:700;padding:13px 24px;min-height:48px;border-radius:9px}button:not(.secondary){color:#fff}button.secondary{background:#fff;border-color:#c7d3e4}textarea{font-size:17px;border-radius:12px}textarea:focus,input:focus,button:focus-visible{outline:2px solid #6892ce;outline-offset:1px}.controls{align-items:flex-end}button:hover:not(:disabled){filter:brightness(.96)}
-@media(max-width:640px){main{padding:28px 16px 48px}h1{font-size:23px;margin-bottom:30px}button{padding:12px 14px;font-size:14px;flex:1 1 auto}section{padding:16px}#alphabet{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}}
+body{font:inherit;line-height:1.65}main{max-width:1080px;padding:52px 28px 72px}header{padding:0}h1{font-size:29px;letter-spacing:.02em;margin:0 0 36px;font-weight:750}button{font-size:15px;font-weight:700;padding:13px 24px;min-height:48px;border-radius:9px}button:not(.secondary){color:#fff}button.secondary{background:#fff;border-color:#c7d3e4}textarea{font-size:17px;border-radius:12px}textarea:focus,input:focus,button:focus-visible{outline:2px solid #6892ce;outline-offset:1px}.controls{align-items:flex-end}.control-field{display:flex;flex-direction:column;gap:6px;margin:0;font-size:13px;font-weight:600}.control-field input[type=color]{width:56px;height:48px;padding:4px;cursor:pointer}.checkbox-inline{display:flex;align-items:center;gap:9px;margin:0 2px 0 0;font-size:14px;font-weight:600;white-space:nowrap}.checkbox-inline input{width:18px;height:18px;cursor:pointer}.preview{background-color:#fff;background-image:linear-gradient(45deg,#edf1f7 25%,transparent 25%),linear-gradient(-45deg,#edf1f7 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#edf1f7 75%),linear-gradient(-45deg,transparent 75%,#edf1f7 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0px}button:hover:not(:disabled){filter:brightness(.96)}
+@media(max-width:640px){main{padding:28px 16px 48px}h1{font-size:23px;margin-bottom:30px}button{padding:12px 14px;font-size:14px;flex:1 1 auto}.control-field{min-width:0}.checkbox-inline{width:100%}section{padding:16px}#alphabet{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}}
 </style><link rel="stylesheet" href="../tool-nav.css"></head>
 <body><main>
 <nav class="tool-nav" aria-label="ツール切り替え">
@@ -18,7 +18,7 @@ body{font:inherit;line-height:1.65}main{max-width:1080px;padding:52px 28px 72px}
 <header><h1>ノヴァ文字変換</h1></header>
 <section><h2>01　画像生成</h2>
 <textarea id="source" rows="4" aria-label="変換する文章"></textarea>
-<div class="controls"><button id="encode">画像生成</button><button id="save" class="secondary">PNG保存</button></div>
+<div class="controls"><label class="control-field" for="textColor">文字色<input id="textColor" type="color" value="#000000"></label><label class="checkbox-inline" for="transparentBg"><input id="transparentBg" type="checkbox">背景透過</label><button id="encode">画像生成</button><button id="save" class="secondary">PNG保存</button></div>
 <p id="encodeStatus" role="status"></p><div class="preview"><canvas id="output" hidden></canvas></div></section>
 <section><h2>02　画像から復元</h2>
 <div id="dropZone" class="drop-zone"><label for="upload" class="file-label">画像をドラッグ＆ドロップまたは貼り付け</label><input id="upload" type="file" accept="image/*" class="visually-hidden" aria-label="画像を選択"></div>
@@ -32,13 +32,13 @@ glyphs['_']=[["M12 89 H80 V96 H12 Z",0]];
 const glyphOrder="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'!?,.-:…()/_";
 const glyphOffset=ch=>/[a-z]/.test(ch)?4:10;
 function glyphSVG(ch){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><g transform="translate(18 ${glyphOffset(ch)})">${glyphs[ch].map(([d,w])=>`<path d="${d}" ${w?`fill="none" stroke="#000" stroke-width="${w}" stroke-linecap="square" stroke-linejoin="miter"`:'fill="#000" fill-rule="evenodd"'}/>`).join('')}</g></svg>`;}
-function drawGlyph(ctx,ch,x,y,s){if(!glyphs[ch])return;ctx.save();ctx.translate(x,y);ctx.scale(s/128,s/128);ctx.translate(18,glyphOffset(ch));ctx.fillStyle=ctx.strokeStyle='#000';ctx.lineCap='square';ctx.lineJoin='miter';for(const [d,w] of glyphs[ch]){const path=new Path2D(d);if(w){ctx.lineWidth=w;ctx.stroke(path);}else ctx.fill(path,'evenodd');}ctx.restore();}
+function drawGlyph(ctx,ch,x,y,s,color='#000'){if(!glyphs[ch])return;ctx.save();ctx.translate(x,y);ctx.scale(s/128,s/128);ctx.translate(18,glyphOffset(ch));ctx.fillStyle=ctx.strokeStyle=color;ctx.lineCap='square';ctx.lineJoin='miter';for(const [d,w] of glyphs[ch]){const path=new Path2D(d);if(w){ctx.lineWidth=w;ctx.stroke(path);}else ctx.fill(path,'evenodd');}ctx.restore();}
 </script><script>'use strict';
 const $=id=>document.getElementById(id), chars=Object.keys(glyphs), output=$('output'), preview=$('inputPreview');
 const canvas=(w,h)=>Object.assign(document.createElement('canvas'),{width:w,height:h});
 let sourceImage=null, loadId=0;
 const PAD=7, SIZE=48, SPACE=16, OUTPUT_SCALE=2;
-function maskOf(c){const {width:w,height:h}=c,d=c.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;const a=new Uint8Array(w*h);let colored=0;for(let i=0;i<a.length;i++){const p=i*4,r=d[p],g=d[p+1],b=d[p+2];a[i]=r*.299+g*.587+b*.114<155;if(Math.max(r,g,b)-Math.min(r,g,b)>30)colored++;}return {a,w,h,colored};}
+function maskOf(c){const {width:w,height:h}=c,d=c.getContext('2d',{willReadFrequently:true}).getImageData(0,0,w,h).data;const a=new Uint8Array(w*h);for(let i=0;i<a.length;i++){const p=i*4,r=d[p],g=d[p+1],b=d[p+2],alpha=d[p+3]/255,lum=(r*.299+g*.587+b*.114)*alpha+255*(1-alpha);a[i]=lum<155;}return {a,w,h};}
 // Half the original glyph side bearings; punctuation receives compact proportional advances.
 const templates=chars.map(ch=>{
  const c=canvas(SIZE,SIZE),ctx=c.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,SIZE,SIZE);drawGlyph(ctx,ch,0,0,SIZE);
@@ -55,13 +55,14 @@ function encode(){
  if(bad.length){$('encodeStatus').textContent='未対応文字: '+bad.join(' ');return false;}
  if(!text.trim()){$('encodeStatus').textContent='文字を入力してください。';output.hidden=true;return false;}
  if(text.length>4000){$('encodeStatus').textContent='4000文字以内で入力してください。';return false;}
+ const transparent=$('transparentBg').checked, inkColor=$('textColor').value;
  const lines=text.split('\n').map(l=>l.trimEnd());
  const width=Math.max(...lines.map(l=>[...l].reduce((n,ch)=>n+advance(ch),0))), rows=lines.length,cols=Math.max(...lines.map(l=>l.length),1);
  if((width+2*PAD)*(rows*SIZE+2*PAD)*OUTPUT_SCALE**2>20000000||(rows*SIZE+2*PAD)*OUTPUT_SCALE>32760||(width+2*PAD)*OUTPUT_SCALE>32760){$('encodeStatus').textContent='画像が大きすぎます。文章を分割してください。';return false;}
- output.width=(width+2*PAD)*OUTPUT_SCALE;output.height=(rows*SIZE+2*PAD)*OUTPUT_SCALE;const ctx=output.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,output.width,output.height);
+ output.width=(width+2*PAD)*OUTPUT_SCALE;output.height=(rows*SIZE+2*PAD)*OUTPUT_SCALE;const ctx=output.getContext('2d');ctx.clearRect(0,0,output.width,output.height);if(!transparent){ctx.fillStyle='#fff';ctx.fillRect(0,0,output.width,output.height);}
  // Draw original SVG paths directly in the doubled output coordinate system.
  ctx.scale(OUTPUT_SCALE,OUTPUT_SCALE);
- lines.forEach((l,j)=>{let x=PAD;for(const ch of l){if(ch!==' '){const t=byChar[ch],y=PAD+j*SIZE;ctx.save();ctx.beginPath();ctx.rect(x,y,t.width,SIZE);ctx.clip();drawGlyph(ctx,ch,x+t.shift,y,SIZE);ctx.restore();}x+=advance(ch);}});
+ lines.forEach((l,j)=>{let x=PAD;for(const ch of l){if(ch!==' '){const t=byChar[ch],y=PAD+j*SIZE;ctx.save();ctx.beginPath();ctx.rect(x,y,t.width,SIZE);ctx.clip();drawGlyph(ctx,ch,x+t.shift,y,SIZE,inkColor);ctx.restore();}x+=advance(ch);}});
  output.hidden=false;$('encodeStatus').textContent=`${cols}列 × ${rows}行 / ${output.width} × ${output.height}px`;return true;
 }
 // Decode the known layout using proportional glyph advances, not free-form OCR.
@@ -95,7 +96,7 @@ function layouts(w,h){const a=[];for(let rows=1;rows<=Math.min(682,Math.floor(h/
 function drawPreview(img){const scale=Math.min(1,2200/Math.max(img.width,img.height));preview.width=Math.max(1,Math.round(img.width*scale));preview.height=Math.max(1,Math.round(img.height*scale));let ctx=preview.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,preview.width,preview.height);ctx.drawImage(img,0,0,preview.width,preview.height);preview.hidden=false;$('emptyPreview').hidden=true;}
 const unsupported='本ツールで生成した画像の形式を確認できませんでした。切り抜きや加工をしていない画像を使用してください。';
 function analyze(img){
- drawPreview(img);$('result').value='';const original=maskOf(preview);if(original.colored>original.w*original.h*.001)throw Error(unsupported);
+ drawPreview(img);$('result').value='';
  let best=null;
  for(const g of layouts(img.width,img.height)){
   const c=canvas(g.W,g.H),ctx=c.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,g.W,g.H);ctx.drawImage(img,0,0,g.W,g.H);const m=maskOf(c);let outside=0,ink=0;
@@ -111,7 +112,7 @@ function analyze(img){
  if(!best)throw Error(unsupported);$('result').value=best.text;$('decodeStatus').textContent=`${best.count}文字を復元しました。`;return {min:best.min,error:best.error};
 }
 function safeAnalyze(img){$('result').value='';try{return analyze(img);}catch(e){$('decodeStatus').textContent=e.message;return null;}}
-$('encode').onclick=encode;$('save').onclick=()=>{if(!encode())return;output.toBlob(b=>{let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='glyph-message.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);});};async function loadImage(file){if(!file)return;const id=++loadId;$('decode').disabled=true;$('result').value='';if(sourceImage){sourceImage.close();sourceImage=null;}preview.hidden=true;$('emptyPreview').hidden=false;$('decodeStatus').textContent='画像を読み込み中…';try{const bitmap=await createImageBitmap(file);if(id!==loadId){bitmap.close();return;}sourceImage=bitmap;drawPreview(bitmap);$('decodeStatus').textContent='画像を読み込みました。';$('decode').disabled=false;}catch{if(id!==loadId)return;$('decodeStatus').textContent='画像を読み込めませんでした。';}}
+$('encode').onclick=encode;$('save').onclick=()=>{if(!encode())return;output.toBlob(b=>{let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=$('transparentBg').checked?'glyph-message-transparent.png':'glyph-message.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);});};async function loadImage(file){if(!file)return;const id=++loadId;$('decode').disabled=true;$('result').value='';if(sourceImage){sourceImage.close();sourceImage=null;}preview.hidden=true;$('emptyPreview').hidden=false;$('decodeStatus').textContent='画像を読み込み中…';try{const bitmap=await createImageBitmap(file);if(id!==loadId){bitmap.close();return;}sourceImage=bitmap;drawPreview(bitmap);$('decodeStatus').textContent='画像を読み込みました。';$('decode').disabled=false;}catch{if(id!==loadId)return;$('decodeStatus').textContent='画像を読み込めませんでした。';}}
 $('upload').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)loadImage(f);};
 const dropZone=$('dropZone');for(let type of ['dragenter','dragover'])dropZone.addEventListener(type,e=>{e.preventDefault();dropZone.classList.add('dragover');if(e.dataTransfer)e.dataTransfer.dropEffect='copy';});dropZone.addEventListener('dragleave',e=>{if(!dropZone.contains(e.relatedTarget))dropZone.classList.remove('dragover');});dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'))||e.dataTransfer.files[0];if(f){$('upload').value='';loadImage(f);}});
 document.addEventListener('paste',e=>{const items=[...(e.clipboardData?.items||[])],files=[...(e.clipboardData?.files||[])];const f=items.find(i=>i.kind==='file'&&i.type.startsWith('image/'))?.getAsFile()||files.find(f=>f.type.startsWith('image/'));if(f){e.preventDefault();$('upload').value='';loadImage(f);}});
