@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="ja">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ノヴァ文字変換</title><style>:root{color-scheme:light dark;--bg:#f4f6fa;--panel:#fff;--text:#172033;--line:#d8deea;--accent:#254ca5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:32px 18px}header{padding:12px 0 20px}small{letter-spacing:.15em;color:#65738a}h1{font-size:clamp(28px,5vw,42px);margin:8px 0}h2{font-size:19px;margin:0 0 18px}section{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:22px;margin-bottom:18px}label{display:block;font-size:13px;font-weight:600}textarea,input,select,button{font:inherit}textarea{width:100%;resize:vertical;padding:12px;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px;background:var(--panel);color:var(--text)}input,select{max-width:100%;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text)}input[type=number]{width:90px}button{cursor:pointer;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;padding:9px 15px}button.secondary{background:transparent;color:var(--accent)}.controls{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:12px 0}.preview{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:8px;min-height:45px;padding:8px}canvas{display:block;max-width:100%;height:auto}#alphabet{display:grid;grid-template-columns:repeat(auto-fill,minmax(65px,1fr));gap:7px}.glyph{background:white;color:#222;border:1px solid #ddd;border-radius:6px;text-align:center}.glyph svg{display:block;width:48px;margin:auto}.note,footer{font-size:12px;color:#65738a} @media(prefers-color-scheme:dark){:root{--bg:#111722;--panel:#1b2433;--text:#e7edf7;--line:#3a4657;--accent:#8aafff}button:not(.secondary){color:#111722}.note,footer,small{color:#a7b4c8}}
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ノヴァ文字変換</title><style>:root{color-scheme:light dark;--bg:#f4f6fa;--panel:#fff;--text:#172033;--line:#d8deea;--accent:#254ca5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:32px 18px}header{padding:12px 0 20px}small{letter-spacing:.15em;color:#65738a}h1{font-size:clamp(28px,5vw,42px);margin:8px 0}h2{font-size:19px;margin:0 0 18px}section{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:22px;margin-bottom:18px}label{display:block;font-size:13px;font-weight:600}textarea,input,select,button{font:inherit}textarea{width:100%;resize:vertical;padding:12px;border:1px solid var(--line);border-radius:8px;margin:6px 0 12px;background:var(--panel);color:var(--text)}input,select{max-width:100%;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text)}button{cursor:pointer;border:1px solid var(--accent);border-radius:8px;background:var(--accent);color:#fff;padding:9px 15px}button.secondary{background:transparent;color:var(--accent)}.controls{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:12px 0}.preview{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:8px;min-height:45px;padding:8px}canvas{display:block;max-width:100%;height:auto}#alphabet{display:grid;grid-template-columns:repeat(auto-fill,minmax(65px,1fr));gap:7px}.glyph{background:white;color:#222;border:1px solid #ddd;border-radius:6px;text-align:center}.glyph svg{display:block;width:48px;margin:auto}.note,footer{font-size:12px;color:#65738a} @media(prefers-color-scheme:dark){:root{--bg:#111722;--panel:#1b2433;--text:#e7edf7;--line:#3a4657;--accent:#8aafff}button:not(.secondary){color:#111722}.note,footer,small{color:#a7b4c8}}
 
 [hidden]{display:none!important}button:disabled{opacity:.45;cursor:not-allowed}.drop-zone{padding:18px;border:2px dashed var(--line);border-radius:10px;text-align:center;transition:background .15s,border-color .15s}.drop-zone.dragover{border-color:var(--accent);background:var(--bg)}.drop-zone p{margin:10px 0 0;font-size:13px}.file-label{margin-bottom:7px}.drop-zone input{max-width:100%}#fileName{display:block;overflow-wrap:anywhere;font-size:12px;margin-top:5px}.input-preview{min-height:75px;margin-top:12px}#emptyPreview{display:block;color:#65738a;text-align:center;padding:12px}#decodeStatus,#encodeStatus{font-size:13px;overflow-wrap:anywhere} @media(max-width:480px){main{padding:18px 12px}section{padding:16px}.drop-zone{padding:12px}}
 
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}.drop-zone{padding:0;position:relative}.drop-zone .file-label{display:block;padding:22px 10px;margin:0;cursor:pointer;font-size:14px;font-weight:400}.drop-zone:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 /* Match the existing site's layout and controls without importing its CSS. */
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#fff;--text:#1f2937;--line:#d1d7e0;--accent:#2456a4;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-synthesis:none}
-body{font:inherit;line-height:1.65}main{max-width:1080px;padding:52px 28px 72px}header{padding:0}h1{font-size:29px;letter-spacing:.02em;margin:0 0 36px;font-weight:750}button{font-size:15px;font-weight:700;padding:13px 24px;min-height:48px;border-radius:9px}button:not(.secondary){color:#fff}button.secondary{background:#fff;border-color:#c7d3e4}textarea{font-size:17px;border-radius:12px}textarea:focus,input:focus,button:focus-visible{outline:2px solid #6892ce;outline-offset:1px}#wrap{min-height:44px}.controls{align-items:flex-end}button:hover:not(:disabled){filter:brightness(.96)}
+body{font:inherit;line-height:1.65}main{max-width:1080px;padding:52px 28px 72px}header{padding:0}h1{font-size:29px;letter-spacing:.02em;margin:0 0 36px;font-weight:750}button{font-size:15px;font-weight:700;padding:13px 24px;min-height:48px;border-radius:9px}button:not(.secondary){color:#fff}button.secondary{background:#fff;border-color:#c7d3e4}textarea{font-size:17px;border-radius:12px}textarea:focus,input:focus,button:focus-visible{outline:2px solid #6892ce;outline-offset:1px}.controls{align-items:flex-end}button:hover:not(:disabled){filter:brightness(.96)}
 @media(max-width:640px){main{padding:28px 16px 48px}h1{font-size:23px;margin-bottom:30px}button{padding:12px 14px;font-size:14px;flex:1 1 auto}section{padding:16px}#alphabet{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}}
 </style><link rel="stylesheet" href="../tool-nav.css"></head>
 <body><main>
@@ -17,10 +17,9 @@ body{font:inherit;line-height:1.65}main{max-width:1080px;padding:52px 28px 72px}
 </nav>
 <header><h1>ノヴァ文字変換</h1></header>
 <section><h2>01　画像生成</h2>
-<textarea id="source" rows="4" aria-label="変換する文章">Hello, World!
-It's a test… (OK?)</textarea>
-<div class="controls"><label>1行の文字数 <input id="wrap" type="number" min="1" max="60" value="24"></label><button id="encode">画像生成</button><button id="save" class="secondary">PNG保存</button></div>
-<p id="encodeStatus" role="status"></p><div class="preview"><canvas id="output"></canvas></div></section>
+<textarea id="source" rows="4" aria-label="変換する文章"></textarea>
+<div class="controls"><button id="encode">画像生成</button><button id="save" class="secondary">PNG保存</button></div>
+<p id="encodeStatus" role="status"></p><div class="preview"><canvas id="output" hidden></canvas></div></section>
 <section><h2>02　画像から復元</h2>
 <div id="dropZone" class="drop-zone"><label for="upload" class="file-label">画像をドラッグ＆ドロップまたは貼り付け</label><input id="upload" type="file" accept="image/*" class="visually-hidden" aria-label="画像を選択"></div>
 <div class="preview input-preview"><canvas id="inputPreview" hidden></canvas><span id="emptyPreview">画像プレビュー</span></div>
@@ -54,15 +53,16 @@ const advance=ch=>ch===' '?SPACE:byChar[ch].width;
 function encode(){
  const text=$('source').value.replace(/\r/g,'').replace(/[‘’]/g,"'").replace(/\t/g,'    '),bad=[...new Set([...text].filter(c=>c!==' '&&c!=='\n'&&!glyphs[c]))];
  if(bad.length){$('encodeStatus').textContent='未対応文字: '+bad.join(' ');return false;}
- if(!text.trim()||text.length>4000){$('encodeStatus').textContent='1〜4000文字の英数字・対応記号を入力してください。';return false;}
- const wrap=Math.max(1,Math.min(60,Math.floor(Number($('wrap').value)||24))),lines=text.split('\n').flatMap(l=>l.match(new RegExp('.{1,'+wrap+'}','g'))||['']).map(l=>l.trimEnd());
+ if(!text.trim()){$('encodeStatus').textContent='文字を入力してください。';output.hidden=true;return false;}
+ if(text.length>4000){$('encodeStatus').textContent='4000文字以内で入力してください。';return false;}
+ const lines=text.split('\n').map(l=>l.trimEnd());
  const width=Math.max(...lines.map(l=>[...l].reduce((n,ch)=>n+advance(ch),0))), rows=lines.length,cols=Math.max(...lines.map(l=>l.length),1);
  if((width+2*PAD)*(rows*SIZE+2*PAD)*OUTPUT_SCALE**2>20000000||(rows*SIZE+2*PAD)*OUTPUT_SCALE>32760||(width+2*PAD)*OUTPUT_SCALE>32760){$('encodeStatus').textContent='画像が大きすぎます。文章を分割してください。';return false;}
  output.width=(width+2*PAD)*OUTPUT_SCALE;output.height=(rows*SIZE+2*PAD)*OUTPUT_SCALE;const ctx=output.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,output.width,output.height);
  // Draw original SVG paths directly in the doubled output coordinate system.
  ctx.scale(OUTPUT_SCALE,OUTPUT_SCALE);
  lines.forEach((l,j)=>{let x=PAD;for(const ch of l){if(ch!==' '){const t=byChar[ch],y=PAD+j*SIZE;ctx.save();ctx.beginPath();ctx.rect(x,y,t.width,SIZE);ctx.clip();drawGlyph(ctx,ch,x+t.shift,y,SIZE);ctx.restore();}x+=advance(ch);}});
- $('encodeStatus').textContent=`${cols}列 × ${rows}行 / ${output.width} × ${output.height}px`;return true;
+ output.hidden=false;$('encodeStatus').textContent=`${cols}列 × ${rows}行 / ${output.width} × ${output.height}px`;return true;
 }
 // Decode the known layout using proportional glyph advances, not free-form OCR.
 // Dynamic programming chooses a sequence of exact layout cells with minimal raster error.
@@ -88,7 +88,7 @@ function decodeRow(m,y0,width){
 function layouts(w,h){const a=[];for(let rows=1;rows<=Math.min(682,Math.floor(h/(SIZE*.30))+1);rows++){
  const H=rows*SIZE+2*PAD,scale=h/H;if(scale<.30||scale>4)continue;
  const raw=w/scale,W=Math.round(raw/2)*2,width=W-2*PAD;
- if(width<6||width>60*48||W*H>20000000||Math.abs(raw-W)>Math.max(1,1/scale))continue;
+ if(width<6||W*OUTPUT_SCALE>32760||W*H>20000000||Math.abs(raw-W)>Math.max(1,1/scale))continue;
  const rank=Math.min(...[1,.5,.75,2,1.5,1/3,.4,.6,.8,.9].map(s=>Math.abs(Math.log(scale/s))));
  a.push({rows,W,H,width,scale,rank});
  }return a.sort((a,b)=>a.rank-b.rank||Math.abs(a.scale-1)-Math.abs(b.scale-1));}
@@ -115,5 +115,5 @@ $('encode').onclick=encode;$('save').onclick=()=>{if(!encode())return;output.toB
 $('upload').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)loadImage(f);};
 const dropZone=$('dropZone');for(let type of ['dragenter','dragover'])dropZone.addEventListener(type,e=>{e.preventDefault();dropZone.classList.add('dragover');if(e.dataTransfer)e.dataTransfer.dropEffect='copy';});dropZone.addEventListener('dragleave',e=>{if(!dropZone.contains(e.relatedTarget))dropZone.classList.remove('dragover');});dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'))||e.dataTransfer.files[0];if(f){$('upload').value='';loadImage(f);}});
 document.addEventListener('paste',e=>{const items=[...(e.clipboardData?.items||[])],files=[...(e.clipboardData?.files||[])];const f=items.find(i=>i.kind==='file'&&i.type.startsWith('image/'))?.getAsFile()||files.find(f=>f.type.startsWith('image/'));if(f){e.preventDefault();$('upload').value='';loadImage(f);}});
-$('decode').onclick=()=>{if(sourceImage)safeAnalyze(sourceImage);};$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('result').value);}catch{$('result').select();document.execCommand('copy');}};for(let ch of [...glyphOrder].filter(c=>/^[A-Za-z0-9]$/.test(c))){let el=document.createElement('div');el.className='glyph';el.innerHTML=glyphSVG(ch)+`<span>${ch}</span>`;$('alphabet').append(el);}encode();
+$('decode').onclick=()=>{if(sourceImage)safeAnalyze(sourceImage);};$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('result').value);}catch{$('result').select();document.execCommand('copy');}};for(let ch of [...glyphOrder].filter(c=>/^[A-Za-z0-9]$/.test(c))){let el=document.createElement('div');el.className='glyph';el.innerHTML=glyphSVG(ch)+`<span>${ch}</span>`;$('alphabet').append(el);}
 </script></body></html>
