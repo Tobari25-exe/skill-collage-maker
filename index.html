@@ -5,9 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>素質コラメーカー</title>
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./tool-nav.css">
 </head>
 <body>
   <main class="app">
+    <nav class="tool-nav" aria-label="ツール切り替え">
+      <a href="./" aria-current="page">素質コラメーカー</a>
+      <a href="./nova/">ノヴァ文字変換</a>
+    </nav>
     <h1>素質コラメーカー</h1>
     <label for="inputText">作りたい文章</label>
     <textarea id="inputText" rows="3" spellcheck="false" placeholder="文章を入力"></textarea>
@@ -22,6 +27,6 @@
       <img id="preview" alt="生成した素質コラ画像">
     </div>
   </main>
-  <script src="./script.js?v=20261107-precision5" type="module"></script>
+  <script src="./script.js" type="module"></script>
 </body>
 </html>

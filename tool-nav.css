@@ -1,0 +1,32 @@
+/* Shared tool navigation; scoped to avoid affecting existing controls. */
+.tool-nav {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  margin: 0 0 28px;
+  border: 1px solid #d1d7e0;
+  border-radius: 12px;
+  background: #fff;
+  box-sizing: border-box;
+}
+.tool-nav a {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 13px 8px;
+  border-radius: 8px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: #2456a4;
+  overflow-wrap: anywhere;
+  transition: background-color .15s;
+}
+.tool-nav a[aria-current="page"] { background: #2456a4; color: #fff; }
+.tool-nav a:not([aria-current]):hover { background: #edf2f9; }
+.tool-nav a:focus-visible { outline: 2px solid #6892ce; outline-offset: 2px; }
+@media (max-width: 640px) {
+  .tool-nav { margin-bottom: 24px; }
+  .tool-nav a { font-size: 13px; padding: 12px 5px; }
+}
